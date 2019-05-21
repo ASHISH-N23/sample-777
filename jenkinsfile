@@ -1,0 +1,47 @@
+pipeline {
+agent {"docker:maven"}
+stages {
+stage('SCM') {
+steps {
+checkout scm
+}
+}
+}
+stage('Build') {
+steps {
+sh '''
+cd build
+mvn clean install -Dmaven.test.skip=true
+'''
+}
+}
+stage('Sonar') {
+steps {
+sh '''
+cd build
+mvn sonar:soanr -Dsonar.host.url=http://admin:admin@192.168.0.82:9000
+'''
+}
+}
+stage ('Test-Cases') {
+steps {
+sh '''
+cd build
+mvn test -Dmaven.dependency.check
+'''
+}
+}
+stage ('Archive-Artifacts') {
+steps {
+archiveArtifacts '**/*.jar'
+archiveArtifacts '**/*.war'
+}
+}
+stage ('Deploy-To-Nexus') {
+steps {
+mvn deploy:deploy-file -DgroupId=chatak-afcs -DartifactId=afcs-server-0.0.1 -Dversion=0.0.1-SNAPSHOT -DgeneratePom=true -Dpackaging=jar -DrepositoryId=nexus -Durl=http://192.168.0.91:8081/repository/maven-snapshots/ -Dfile=transit-services/target/afcs-server-0.0.1.jar
+}
+}
+}
+
+}
